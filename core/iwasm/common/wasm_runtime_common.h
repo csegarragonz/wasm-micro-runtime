@@ -67,6 +67,11 @@ typedef struct WASMRegisteredModule {
 } WASMRegisteredModule;
 #endif
 
+typedef struct WASMMemoryInstanceCommon {
+    uint32 module_type;
+    uint8 memory_inst_data[1];
+} WASMMemoryInstanceCommon;
+
 typedef package_type_t PackageType;
 typedef wasm_section_t WASMSection, AOTSection;
 
@@ -104,6 +109,17 @@ wasm_runtime_load_from_sections(WASMSection *section_list, bool is_aot,
 /* See wasm_export.h for description */
 void
 wasm_runtime_unload(WASMModuleCommon *module);
+
+/* Internal API */
+WASMModuleInstanceCommon *
+wasm_runtime_instantiate_internal(WASMModuleCommon *module, bool is_sub_inst,
+                                  uint32 stack_size, uint32 heap_size,
+                                  char *error_buf, uint32 error_buf_size);
+
+/* Internal API */
+void
+wasm_runtime_deinstantiate_internal(WASMModuleInstanceCommon *module_inst,
+                                    bool is_sub_inst);
 
 /* See wasm_export.h for description */
 WASMModuleInstanceCommon *
@@ -319,6 +335,16 @@ wasm_runtime_destroy_loading_module_list();
 bool
 wasm_runtime_is_built_in_module(const char *module_name);
 
+#if WASM_ENABLE_THREAD_MGR != 0
+bool
+wasm_exec_env_get_aux_stack(WASMExecEnv *exec_env,
+                            uint32 *start_offset, uint32 *size);
+
+bool
+wasm_exec_env_set_aux_stack(WASMExecEnv *exec_env,
+                            uint32 start_offset, uint32 size);
+#endif
+
 #if WASM_ENABLE_LIBC_WASI != 0
 /* See wasm_export.h for description */
 void
@@ -355,6 +381,10 @@ WASIContext *
 wasm_runtime_get_wasi_ctx(WASMModuleInstanceCommon *module_inst);
 
 #endif /* end of WASM_ENABLE_LIBC_WASI */
+
+/* Get module of the current exec_env */
+WASMModuleCommon*
+wasm_exec_env_get_module(WASMExecEnv *exec_env);
 
 /**
  * Enlarge wasm memory data space.

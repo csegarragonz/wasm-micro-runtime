@@ -82,9 +82,9 @@ int os_mutex_init(korp_mutex *mutex);
 
 int os_mutex_destroy(korp_mutex *mutex);
 
-void os_mutex_lock(korp_mutex *mutex);
+int os_mutex_lock(korp_mutex *mutex);
 
-void os_mutex_unlock(korp_mutex *mutex);
+int os_mutex_unlock(korp_mutex *mutex);
 
 
 /**************************************************
@@ -110,9 +110,9 @@ enum {
     MMAP_MAP_FIXED = 2
 };
 
-void *os_mmap(void *hint, unsigned int size, int prot, int flags);
-void os_munmap(void *addr, uint32 size);
-int os_mprotect(void *addr, uint32 size, int prot);
+void *os_mmap(void *hint, size_t size, int prot, int flags);
+void os_munmap(void *addr, size_t size);
+int os_mprotect(void *addr, size_t size, int prot);
 
 /**
  * Flush cpu data cache, in some CPUs, after applying relocation to the

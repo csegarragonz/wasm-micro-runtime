@@ -60,9 +60,9 @@ typedef enum WASMOpcode {
     WASM_OP_GET_GLOBAL    = 0x23, /* get_global */
     WASM_OP_SET_GLOBAL    = 0x24, /* set_global */
 
-    WASM_OP_UNUSED_0x25   = 0x25,
-    WASM_OP_UNUSED_0x26   = 0x26,
-    WASM_OP_UNUSED_0x27   = 0x27,
+    WASM_OP_GET_GLOBAL_64 = 0x25,
+    WASM_OP_SET_GLOBAL_64 = 0x26,
+    WASM_OP_SET_GLOBAL_AUX_STACK = 0x27,
 
     /* memory instructions */
     WASM_OP_I32_LOAD      = 0x28, /* i32.load */
@@ -255,8 +255,11 @@ typedef enum WASMOpcode {
     EXT_OP_TEE_LOCAL_FAST_I64     = 0xcb,
     EXT_OP_COPY_STACK_TOP         = 0xcc,
     EXT_OP_COPY_STACK_TOP_I64     = 0xcd,
-
-    WASM_OP_IMPDEP                = 0xce,
+    EXT_OP_COPY_STACK_VALUES      = 0xce,
+    EXT_OP_BLOCK                  = 0xcf, /* block with blocktype */
+    EXT_OP_LOOP                   = 0xd0, /* loop with blocktype */
+    EXT_OP_IF                     = 0xd1, /* if with blocktype */
+    WASM_OP_IMPDEP                = 0xd2,
 
     /* Post-MVP extend op prefix */
     WASM_OP_MISC_PREFIX           = 0xfc,
@@ -330,9 +333,9 @@ static type _name[WASM_INSTRUCTION_NUM] = {                  \
   HANDLE_OPCODE (WASM_OP_TEE_LOCAL),     /* 0x22 */          \
   HANDLE_OPCODE (WASM_OP_GET_GLOBAL),    /* 0x23 */          \
   HANDLE_OPCODE (WASM_OP_SET_GLOBAL),    /* 0x24 */          \
-  HANDLE_OPCODE (WASM_OP_UNUSED_0x25),   /* 0x25 */          \
-  HANDLE_OPCODE (WASM_OP_UNUSED_0x26),   /* 0x26 */          \
-  HANDLE_OPCODE (WASM_OP_UNUSED_0x27),   /* 0x27 */          \
+  HANDLE_OPCODE (WASM_OP_GET_GLOBAL_64), /* 0x25 */          \
+  HANDLE_OPCODE (WASM_OP_SET_GLOBAL_64), /* 0x26 */          \
+  HANDLE_OPCODE (WASM_OP_SET_GLOBAL_AUX_STACK), /* 0x27 */   \
   HANDLE_OPCODE (WASM_OP_I32_LOAD),      /* 0x28 */          \
   HANDLE_OPCODE (WASM_OP_I64_LOAD),      /* 0x29 */          \
   HANDLE_OPCODE (WASM_OP_F32_LOAD),      /* 0x2a */          \
@@ -499,7 +502,11 @@ static type _name[WASM_INSTRUCTION_NUM] = {                  \
   HANDLE_OPCODE (EXT_OP_TEE_LOCAL_FAST_I64), /* 0xcb */      \
   HANDLE_OPCODE (EXT_OP_COPY_STACK_TOP),     /* 0xcc */      \
   HANDLE_OPCODE (EXT_OP_COPY_STACK_TOP_I64), /* 0xcd */      \
-  HANDLE_OPCODE (WASM_OP_IMPDEP),            /* 0xce */      \
+  HANDLE_OPCODE (EXT_OP_COPY_STACK_VALUES),  /* 0xce */      \
+  HANDLE_OPCODE (EXT_OP_BLOCK),              /* 0xcf */      \
+  HANDLE_OPCODE (EXT_OP_LOOP),               /* 0xd0 */      \
+  HANDLE_OPCODE (EXT_OP_IF),                 /* 0xd1 */      \
+  HANDLE_OPCODE (WASM_OP_IMPDEP),            /* 0xd2 */      \
 };                                                           \
 do {                                                         \
   _name[WASM_OP_MISC_PREFIX] =                               \

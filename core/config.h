@@ -62,7 +62,7 @@ enum {
 #endif
 
 #define AOT_MAGIC_NUMBER 0x746f6100
-#define AOT_CURRENT_VERSION 1
+#define AOT_CURRENT_VERSION 2
 
 #ifndef WASM_ENABLE_JIT
 #define WASM_ENABLE_JIT 0
@@ -86,6 +86,10 @@ enum {
 #define WASM_ENABLE_LIBC_WASI 0
 #endif
 
+#ifndef WASM_ENABLE_LIB_PTHREAD
+#define WASM_ENABLE_LIB_PTHREAD 0
+#endif
+
 #ifndef WASM_ENABLE_BASE_LIB
 #define WASM_ENABLE_BASE_LIB 0
 #endif
@@ -97,6 +101,16 @@ enum {
 /* Bulk memory operation */
 #ifndef WASM_ENABLE_BULK_MEMORY
 #define WASM_ENABLE_BULK_MEMORY 0
+#endif
+
+/* Shared memory */
+#ifndef WASM_ENABLE_SHARED_MEMORY
+#define WASM_ENABLE_SHARED_MEMORY 0
+#endif
+
+/* Thread manager */
+#ifndef WASM_ENABLE_THREAD_MGR
+#define WASM_ENABLE_THREAD_MGR 0
 #endif
 
 /* WASM log system */
@@ -112,6 +126,11 @@ enum {
 
 /* WASM Interpreter labels-as-values feature */
 #define WASM_ENABLE_LABELS_AS_VALUES 1
+
+/* Enable fast interpreter or not */
+#ifndef WASM_ENABLE_FAST_INTERP
+#define WASM_ENABLE_FAST_INTERP 0
+#endif
 
 #if WASM_ENABLE_FAST_INTERP != 0
 #define WASM_ENABLE_ABS_LABEL_ADDR 1
@@ -133,6 +152,12 @@ enum {
 /* Enable wasm mini loader or not */
 #ifndef WASM_ENABLE_MINI_LOADER
 #define WASM_ENABLE_MINI_LOADER 0
+#endif
+
+/* Disable boundary check with hardware trap or not,
+ * enable it by default if it is supported */
+#ifndef WASM_DISABLE_HW_BOUND_CHECK
+#define WASM_DISABLE_HW_BOUND_CHECK 0
 #endif
 
 /* Heap and stack profiling */
@@ -185,8 +210,8 @@ enum {
 
 /* Default/min/max stack size of each app thread */
 #if !defined(BH_PLATFORM_ZEPHYR) && !defined(BH_PLATFORM_ALIOS_THINGS)
-#define APP_THREAD_STACK_SIZE_DEFAULT (20 * 1024)
-#define APP_THREAD_STACK_SIZE_MIN (16 * 1024)
+#define APP_THREAD_STACK_SIZE_DEFAULT (32 * 1024)
+#define APP_THREAD_STACK_SIZE_MIN (24 * 1024)
 #define APP_THREAD_STACK_SIZE_MAX (256 * 1024)
 #else
 #define APP_THREAD_STACK_SIZE_DEFAULT (6 * 1024)
@@ -205,6 +230,10 @@ enum {
 #ifndef WASM_ENABLE_SPEC_TEST
 #define WASM_ENABLE_SPEC_TEST 0
 #endif
+
+/* Default max thread num per cluster. Can be overwrite by
+    wasm_runtime_set_max_thread_num */
+#define CLUSTER_MAX_THREAD_NUM 4
 
 #endif /* end of _CONFIG_H_ */
 

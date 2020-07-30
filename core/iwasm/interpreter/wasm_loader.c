@@ -10,6 +10,10 @@
 #include "wasm_opcode.h"
 #include "wasm_runtime.h"
 #include "../common/wasm_native.h"
+#if(FAASM_SGX_WHITELISTING)
+extern uint8_t _is_whitelisted(const char* func_name_ptr);
+extern void sgx_wamr_function_not_whitelisted_wrapper(wasm_exec_env_t exec_env);
+#endif
 
 /* Read a value of given type from the address pointed to by the given
    pointer and increase the pointer to the position just after the
@@ -794,6 +798,11 @@ load_function_import(const WASMModule *parent_module, WASMModule *sub_module,
     function->field_name = function_name;
     function->func_type = declare_func_type;
     /* func_ptr_linked is for built-in functions */
+#if(FAASM_SGX_WHITELISTING)
+    if(!_is_whitelisted(function_name)){
+        function->func_ptr_linked = (void*) sgx_wamr_function_not_whitelisted_wrapper;
+    }else
+#endif
     function->func_ptr_linked = is_built_in_module ? linked_func : NULL;
     function->signature = linked_signature;
     function->attachment = linked_attachment;

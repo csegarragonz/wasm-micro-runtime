@@ -76,7 +76,9 @@ static inline void
 generic_vec_init_data(Vector *out, size_t num_of_elems, size_t size_of_elem)
 {
     if (!bh_vector_init(out, num_of_elems, size_of_elem)) {
-        memset(out, 0, sizeof(Vector));
+        out->data = NULL;
+        out->max_elems = 0;
+        out->num_elems = 0;
     }
     else {
         memset(out->data, 0, num_of_elems * size_of_elem);
@@ -1032,13 +1034,13 @@ argv_to_params(const uint64 *argv,
         switch (param_def->kind) {
             case WASM_I32:
                 param->kind = WASM_I32;
-                param->of.i32 = *(uint32 *)argv_p;
+                param->of.i32 = *(int32 *)argv_p;
                 argv_p = (uint32 *)argv_p + 1;
                 argc++;
                 break;
             case WASM_I64:
                 param->kind = WASM_I64;
-                param->of.i64 = *(uint64 *)argv_p;
+                param->of.i64 = *(int64 *)argv_p;
                 argv_p = (uint64 *)argv_p + 1;
                 argc++;
                 break;
@@ -1079,12 +1081,12 @@ results_to_argv(const wasm_val_t *results,
         const wasm_val_t *result = results + i;
         switch (result_def->kind) {
             case WASM_I32:
-                *(uint32 *)argv_p = result->of.i32;
+                *(int32 *)argv_p = result->of.i32;
                 argv_p = (uint32 *)argv_p + 1;
                 argc++;
                 break;
             case WASM_I64:
-                *(uint64 *)argv_p = result->of.i64;
+                *(int64 *)argv_p = result->of.i64;
                 argv_p = (uint64 *)argv_p + 1;
                 argc++;
                 break;
@@ -1783,7 +1785,7 @@ aot_global_set(const AOTModuleInstance *inst_aot,
             .type;
     }
 
-    data = inst_aot->global_data.ptr + data_offset;
+    data = (void *)((uint8 *)inst_aot->global_data.ptr + data_offset);
     switch (val_type_rt) {
         case VALUE_TYPE_I32:
             bh_assert(WASM_I32 == v->kind);
@@ -1832,7 +1834,7 @@ aot_global_get(const AOTModuleInstance *inst_aot,
             .type;
     }
 
-    data = inst_aot->global_data.ptr + data_offset;
+    data = (void *)((uint8 *)inst_aot->global_data.ptr + data_offset);
     switch (val_type_rt) {
         case VALUE_TYPE_I32:
             out->kind = WASM_I32;
@@ -2097,7 +2099,7 @@ interp_link_table(const WASMModule *module_interp,
     return false;
 }
 
-static int32
+static uint32
 interp_link(const wasm_instance_t *inst,
             const WASMModule *module_interp,
             wasm_extern_t *imports[])
@@ -2155,7 +2157,7 @@ interp_link(const wasm_instance_t *inst,
 
 failed:
     LOG_DEBUG("%s failed", __FUNCTION__);
-    return -1;
+    return (uint32)-1;
 }
 
 static bool
@@ -2200,9 +2202,9 @@ interp_process_export(wasm_store_t *store,
 
                 external = wasm_global_as_extern(global);
                 break;
-            // TODO:
             case EXPORT_KIND_MEMORY:
             case EXPORT_KIND_TABLE:
+                /* TODO: */
                 break;
             default:
                 goto failed;
@@ -2294,7 +2296,7 @@ failed:
     return false;
 }
 
-static int32
+static uint32
 aot_link(const wasm_instance_t *inst,
          const AOTModule *module_aot,
          wasm_extern_t *imports[])
@@ -2344,7 +2346,7 @@ aot_link(const wasm_instance_t *inst,
 
 failed:
     LOG_DEBUG("%s failed", __FUNCTION__);
-    return -1;
+    return (uint32)-1;
 }
 
 static bool
@@ -2417,7 +2419,7 @@ wasm_instance_new(wasm_store_t *store,
     char error[128] = { 0 };
     const uint32 stack_size = 16 * 1024;
     const uint32 heap_size = 16 * 1024;
-    int32 import_count = 0;
+    uint32 import_count = 0;
     wasm_instance_t *instance = NULL;
     uint32 i = 0;
     (void)traps;
@@ -2457,7 +2459,7 @@ wasm_instance_new(wasm_store_t *store,
           aot_link(instance, (AOTModule *)*module, (wasm_extern_t **)imports);
 #endif
     }
-    if (import_count < 0) {
+    if ((int32)import_count < 0) {
         goto failed;
     }
 

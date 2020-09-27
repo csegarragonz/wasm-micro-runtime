@@ -112,38 +112,24 @@ int os_mutex_destroy(korp_mutex *mutex)
     return ret == 0 ? BHT_OK : BHT_ERROR;
 }
 
-/* Returned error (EINVAL, EAGAIN and EDEADLK) from
- locking the mutex indicates some logic error present in
- the program somewhere.
- Don't try to recover error for an existing unknown error.*/
 int os_mutex_lock(korp_mutex *mutex)
 {
     int ret;
 
     assert(mutex);
     ret = pthread_mutex_lock(mutex);
-    if (0 != ret) {
-        os_printf("vm mutex lock failed (ret=%d)!\n", ret);
-        exit(-1);
-    }
-    return ret;
+
+    return ret == 0 ? BHT_OK : BHT_ERROR;
 }
 
-/* Returned error (EINVAL, EAGAIN and EPERM) from
- unlocking the mutex indicates some logic error present
- in the program somewhere.
- Don't try to recover error for an existing unknown error.*/
 int os_mutex_unlock(korp_mutex *mutex)
 {
     int ret;
 
     assert(mutex);
     ret = pthread_mutex_unlock(mutex);
-    if (0 != ret) {
-        os_printf("vm mutex unlock failed (ret=%d)!\n", ret);
-        exit(-1);
-    }
-    return ret;
+
+    return ret == 0 ? BHT_OK : BHT_ERROR;
 }
 
 int os_cond_init(korp_cond *cond)
@@ -238,16 +224,27 @@ void os_thread_exit(void *retval)
 uint8 *os_thread_get_stack_boundary()
 {
     pthread_t self = pthread_self();
+#ifdef __linux__
     pthread_attr_t attr;
+    size_t guard_size;
+#endif
     uint8 *addr = NULL;
-    size_t stack_size, guard_size;
+    size_t stack_size;
     int page_size = getpagesize();
+    size_t max_stack_size = (size_t)
+                            (APP_THREAD_STACK_SIZE_MAX + page_size - 1)
+                            & ~(page_size - 1);
+
+    if (max_stack_size < APP_THREAD_STACK_SIZE_DEFAULT)
+        max_stack_size = APP_THREAD_STACK_SIZE_DEFAULT;
 
 #ifdef __linux__
     if (pthread_getattr_np(self, &attr) == 0) {
         pthread_attr_getstack(&attr, (void**)&addr, &stack_size);
         pthread_attr_getguardsize(&attr, &guard_size);
         pthread_attr_destroy(&attr);
+        if (stack_size > max_stack_size)
+            addr = addr + stack_size - max_stack_size;
         if (guard_size < (size_t)page_size)
             /* Reserved 1 guard page at least for safety */
             guard_size = (size_t)page_size;
@@ -257,7 +254,10 @@ uint8 *os_thread_get_stack_boundary()
 #elif defined(__APPLE__)
     if ((addr = (uint8*)pthread_get_stackaddr_np(self))) {
         stack_size = pthread_get_stacksize_np(self);
-        addr -= stack_size;
+        if (stack_size > max_stack_size)
+            addr -= max_stack_size;
+        else
+            addr -= stack_size;
         /* Reserved 1 guard page at least for safety */
         addr += page_size;
     }

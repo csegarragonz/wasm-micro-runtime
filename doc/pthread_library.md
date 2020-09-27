@@ -67,7 +67,6 @@ You can also build this program with WASI, but we need to make some changes to w
     ```
 > Note: </br>
 >1. Remember to back up the original sysroot files
->2. wasi-sdk 9.0 or above are not supported, please use 7.0 or 8.0
 
 Then build the program with this command:
 ``` bash
@@ -116,7 +115,7 @@ The default value of N is 4, which means you can create 4 threads at most. This 
 ``` bash
 ./iwasm --max-threads=n test.wasm
 ```
-If you are going to develop your own runtime product, you can use the API `wasm_runtime_set_max_thread_num` to set the value, or you can change the macro `CLUSTER_MAX_THREAD_NUM` in [config.h](../core/config.h),
+If you are going to develop your own runtime product, you can use the API `wasm_runtime_set_max_thread_num` or init arg `init_args.max_thread_num` to set the value, or you can change the macro `CLUSTER_MAX_THREAD_NUM` in [config.h](../core/config.h).
 
 > Note: the total size of aux stack reserved by compiler can be set with `-z stack-size` option during compilation. If you need to create more threads, please set a larger value, otherwise it is easy to cause aux stack overflow.
 

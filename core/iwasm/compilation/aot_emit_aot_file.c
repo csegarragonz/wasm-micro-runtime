@@ -420,9 +420,8 @@ get_init_data_section_size(AOTCompData *comp_data, AOTObjectData *obj_data)
     size = align_uint(size, 4);
     size += (uint32)sizeof(uint32) * 2;
 
-    /* llvm aux data end + llvm aux stack bottom
-       + llvm aux stack size + llvm stack global index */
-    size += sizeof(uint32) * 4;
+    /* aux data/heap/stack data */
+    size += sizeof(uint32) * 7;
 
     size += get_object_data_section_info_size(obj_data);
     return size;
@@ -1190,10 +1189,13 @@ aot_emit_init_data_section(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
     EMIT_U32(comp_data->func_count);
     EMIT_U32(comp_data->start_func_index);
 
-    EMIT_U32(comp_data->llvm_aux_data_end);
-    EMIT_U32(comp_data->llvm_aux_stack_bottom);
-    EMIT_U32(comp_data->llvm_aux_stack_size);
-    EMIT_U32(comp_data->llvm_aux_stack_global_index);
+    EMIT_U32(comp_data->aux_data_end_global_index);
+    EMIT_U32(comp_data->aux_data_end);
+    EMIT_U32(comp_data->aux_heap_base_global_index);
+    EMIT_U32(comp_data->aux_heap_base);
+    EMIT_U32(comp_data->aux_stack_top_global_index);
+    EMIT_U32(comp_data->aux_stack_bottom);
+    EMIT_U32(comp_data->aux_stack_size);
 
     if (!aot_emit_object_data_section_info(buf, buf_end, &offset, obj_data))
         return false;
@@ -1397,6 +1399,27 @@ aot_emit_relocation_section(uint8 *buf, uint8 *buf_end, uint32 *p_offset,
     return true;
 }
 
+typedef uint32 U32;
+typedef int32  I32;
+typedef uint16 U16;
+typedef uint8  U8;
+
+struct coff_hdr {
+    U16 u16Machine;
+    U16 u16NumSections;
+    U32 u32DateTimeStamp;
+    U32 u32SymTblPtr;
+    U32 u32NumSymbols;
+    U16 u16PeHdrSize;
+    U16 u16Characs;
+};
+
+#define IMAGE_FILE_MACHINE_AMD64  0x8664
+#define IMAGE_FILE_MACHINE_I386   0x014c
+#define IMAGE_FILE_MACHINE_IA64   0x0200
+
+#define AOT_COFF_BIN_TYPE 6
+
 #define EI_NIDENT 16
 
 typedef uint32  elf32_word;
@@ -1485,7 +1508,8 @@ aot_resolve_target_info(AOTCompContext *comp_ctx, AOTObjectData *obj_data)
     const uint8 *elf_buf = (uint8 *)LLVMGetBufferStart(obj_data->mem_buf);
     uint32 elf_size = (uint32)LLVMGetBufferSize(obj_data->mem_buf);
 
-    if (bin_type != LLVMBinaryTypeELF32L
+    if (bin_type != LLVMBinaryTypeCOFF
+        && bin_type != LLVMBinaryTypeELF32L
         && bin_type != LLVMBinaryTypeELF32B
         && bin_type != LLVMBinaryTypeELF64L
         && bin_type != LLVMBinaryTypeELF64B
@@ -1499,8 +1523,24 @@ aot_resolve_target_info(AOTCompContext *comp_ctx, AOTObjectData *obj_data)
 
     obj_data->target_info.bin_type = bin_type - LLVMBinaryTypeELF32L;
 
-    if (bin_type == LLVMBinaryTypeELF32L
-        || bin_type == LLVMBinaryTypeELF32B) {
+    if (bin_type == LLVMBinaryTypeCOFF) {
+        struct coff_hdr  * coff_header;
+
+        if (!elf_buf || elf_size < sizeof(struct coff_hdr)) {
+            aot_set_last_error("invalid coff_hdr buffer.");
+            return false;
+        }
+        coff_header = (struct coff_hdr *)elf_buf;
+        obj_data->target_info.e_type = 1;
+        obj_data->target_info.e_machine = coff_header->u16Machine;
+        obj_data->target_info.e_version = 1;
+        obj_data->target_info.e_flags = 0;
+
+        if (coff_header->u16Machine == IMAGE_FILE_MACHINE_AMD64)
+            obj_data->target_info.bin_type = AOT_COFF_BIN_TYPE;
+    }
+    else if (bin_type == LLVMBinaryTypeELF32L
+             || bin_type == LLVMBinaryTypeELF32B) {
         struct elf32_ehdr *elf_header;
         bool is_little_bin = bin_type == LLVMBinaryTypeELF32L;
 
@@ -1845,7 +1885,7 @@ fail:
 }
 
 static bool
-is_relocation_section(char *section_name)
+is_relocation_section_name(char *section_name)
 {
     return (!strcmp(section_name, ".rela.text")
             || !strcmp(section_name, ".rel.text")
@@ -1863,19 +1903,32 @@ is_relocation_section(char *section_name)
 }
 
 static bool
+is_relocation_section(LLVMSectionIteratorRef sec_itr)
+{
+    uint32 count = 0;
+    char *name = (char *)LLVMGetSectionName(sec_itr);
+    if (name) {
+        if (is_relocation_section_name(name))
+            return true;
+        else if (!strncmp(name, ".text", strlen(".text"))
+                 && get_relocations_count(sec_itr, &count) && count > 0)
+            return true;
+    }
+    return false;
+}
+
+static bool
 get_relocation_groups_count(AOTObjectData *obj_data, uint32 *p_count)
 {
     uint32 count = 0;
     LLVMSectionIteratorRef sec_itr;
-    char *name;
 
     if (!(sec_itr = LLVMObjectFileCopySectionIterator(obj_data->binary))) {
         aot_set_last_error("llvm get section iterator failed.");
         return false;
     }
     while (!LLVMObjectFileIsSectionIteratorAtEnd(obj_data->binary, sec_itr)) {
-        if ((name = (char *)LLVMGetSectionName(sec_itr))
-            && is_relocation_section(name)) {
+        if (is_relocation_section(sec_itr)) {
             count++;
         }
         LLVMMoveToNextSection(sec_itr);
@@ -1916,8 +1969,8 @@ aot_resolve_object_relocation_groups(AOTObjectData *obj_data)
         return false;
     }
     while (!LLVMObjectFileIsSectionIteratorAtEnd(obj_data->binary, sec_itr)) {
-        if ((name = (char *)LLVMGetSectionName(sec_itr))
-            && is_relocation_section(name)) {
+        if (is_relocation_section(sec_itr)) {
+            name = (char *)LLVMGetSectionName(sec_itr);
             relocation_group->section_name = name;
             if (!aot_resolve_object_relocation_group(
                     obj_data,

@@ -43,12 +43,8 @@
 #define BH_DEBUG 0
 #endif
 
-enum {
-    /* Memory allocator ems */
-    MEM_ALLOCATOR_EMS = 0,
-    /* Memory allocator tlsf */
-    MEM_ALLOCATOR_TLSF
-};
+#define MEM_ALLOCATOR_EMS  0
+#define MEM_ALLOCATOR_TLSF 1
 
 /* Default memory allocator */
 #define DEFAULT_MEM_ALLOCATOR MEM_ALLOCATOR_EMS
@@ -125,7 +121,11 @@ enum {
 #endif
 
 /* WASM Interpreter labels-as-values feature */
+#ifdef __GNUC__
 #define WASM_ENABLE_LABELS_AS_VALUES 1
+#else
+#define WASM_ENABLE_LABELS_AS_VALUES 0
+#endif
 
 /* Enable fast interpreter or not */
 #ifndef WASM_ENABLE_FAST_INTERP
@@ -160,11 +160,20 @@ enum {
 #define WASM_DISABLE_HW_BOUND_CHECK 0
 #endif
 
-/* Heap and stack profiling */
-#define BH_ENABLE_MEMORY_PROFILING 0
+/* Memory profiling */
+#ifndef WASM_ENABLE_MEMORY_PROFILING
+#define WASM_ENABLE_MEMORY_PROFILING 0
+#endif
+
+/* Memory tracing */
+#ifndef WASM_ENABLE_MEMORY_TRACING
+#define WASM_ENABLE_MEMORY_TRACING 0
+#endif
 
 /* Heap verification */
+#ifndef BH_ENABLE_GC_VERIFY
 #define BH_ENABLE_GC_VERIFY 0
+#endif
 
 /* Max app number of all modules */
 #define MAX_APP_INSTALLATIONS 3
@@ -193,12 +202,9 @@ enum {
 /* The max percentage of global heap that app memory space can grow */
 #define APP_MEMORY_MAX_GLOBAL_HEAP_PERCENT 1 / 3
 
-/* Default base offset of app heap space */
-#define DEFAULT_APP_HEAP_BASE_OFFSET (1 * BH_GB)
-
 /* Default min/max heap size of each app */
 #define APP_HEAP_SIZE_DEFAULT (8 * 1024)
-#define APP_HEAP_SIZE_MIN (2 * 1024)
+#define APP_HEAP_SIZE_MIN (512)
 #define APP_HEAP_SIZE_MAX (512 * 1024 * 1024)
 
 /* Default wasm stack size of each app */
@@ -212,11 +218,12 @@ enum {
 #if !defined(BH_PLATFORM_ZEPHYR) && !defined(BH_PLATFORM_ALIOS_THINGS)
 #define APP_THREAD_STACK_SIZE_DEFAULT (32 * 1024)
 #define APP_THREAD_STACK_SIZE_MIN (24 * 1024)
-#define APP_THREAD_STACK_SIZE_MAX (256 * 1024)
 #else
 #define APP_THREAD_STACK_SIZE_DEFAULT (6 * 1024)
 #define APP_THREAD_STACK_SIZE_MIN (4 * 1024)
-#define APP_THREAD_STACK_SIZE_MAX (256 * 1024)
+#endif
+#if !defined(APP_THREAD_STACK_SIZE_MAX)
+#define APP_THREAD_STACK_SIZE_MAX (8 * 1024 * 1024)
 #endif
 
 /* Reserved bytes to the native thread stack boundary, throw native
@@ -224,7 +231,9 @@ enum {
 #define RESERVED_BYTES_TO_NATIVE_STACK_BOUNDARY (512)
 
 /* Default wasm block address cache size and conflict list size */
+#ifndef BLOCK_ADDR_CACHE_SIZE
 #define BLOCK_ADDR_CACHE_SIZE 64
+#endif
 #define BLOCK_ADDR_CONFLICT_SIZE 2
 
 #ifndef WASM_ENABLE_SPEC_TEST
@@ -234,6 +243,10 @@ enum {
 /* Default max thread num per cluster. Can be overwrite by
     wasm_runtime_set_max_thread_num */
 #define CLUSTER_MAX_THREAD_NUM 4
+
+#ifndef WASM_ENABLE_TAIL_CALL
+#define WASM_ENABLE_TAIL_CALL 0
+#endif
 
 #endif /* end of _CONFIG_H_ */
 

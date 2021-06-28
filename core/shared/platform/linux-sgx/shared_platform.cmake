@@ -27,9 +27,9 @@ endif ()
 
 # If activated, this disables all pthread related functions!
 # Currently, we don't need thread mgr but wamr must be thread-safe!
-#if (NOT WAMR_BUILD_THREAD_MGR EQUAL 1)
-#  add_definitions(-DSGX_DISABLE_PTHREAD)
-#endif ()
+if (NOT WAMR_BUILD_THREAD_MGR EQUAL 1)
+  add_definitions(-DSGX_DISABLE_PTHREAD)
+endif ()
 
 file (GLOB source_all ${PLATFORM_SHARED_DIR}/*.c)
 

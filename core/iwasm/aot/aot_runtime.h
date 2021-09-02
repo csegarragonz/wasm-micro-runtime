@@ -195,10 +195,10 @@ typedef struct AOTModule {
     AOTCompData *comp_data;
 #endif
 
-#if WASM_ENABLE_LIBC_WASI != 0
+// #if WASM_ENABLE_LIBC_WASI != 0
     WASIArguments wasi_args;
     bool is_wasi_module;
-#endif
+// #endif
 } AOTModule;
 
 typedef union {

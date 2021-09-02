@@ -891,14 +891,11 @@ load_import_funcs(const uint8 **p_buf, const uint8 *buf_end,
                         module_name, field_name);
         }
 
-// 02/09/2021 - We disable WAMR's WASI implementation and use our own. Yet,
-// we register symbols through WAMR and thus expect the loader to register the
-// symbols in the right module.
-// #if WASM_ENABLE_LIBC_WASI != 0
+#if WASM_ENABLE_LIBC_WASI != 0
         if (!strcmp(import_funcs[i].module_name, "wasi_unstable")
             || !strcmp(import_funcs[i].module_name, "wasi_snapshot_preview1"))
             module->is_wasi_module = true;
-// #endif
+#endif
     }
 
     *p_buf = buf;

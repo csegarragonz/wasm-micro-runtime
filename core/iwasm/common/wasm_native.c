@@ -349,6 +349,7 @@ wasm_native_init()
         return false;
 #endif /* WASM_ENABLE_SPEC_TEST */
 
+/* 02/09/21 - Use our own wasi implementation
 #if WASM_ENABLE_LIBC_WASI != 0
     n_native_symbols = get_libc_wasi_export_apis(&native_symbols);
     if (!wasm_native_register_natives("wasi_unstable",
@@ -358,6 +359,7 @@ wasm_native_init()
                                       native_symbols, n_native_symbols))
         return false;
 #endif
+*/
 
 #if WASM_ENABLE_BASE_LIB != 0
     n_native_symbols = get_base_lib_export_apis(&native_symbols);
